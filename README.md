@@ -1,0 +1,1 @@
+Time-clock protal is a workforce management application designed to simplify employee attendance tracking and payroll management. The system helps organizations efficiently monitor employee working hours, manage attendance records .
