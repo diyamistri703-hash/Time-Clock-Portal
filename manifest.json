@@ -1,0 +1,21 @@
+{
+  "short_name": "Time Clock",
+  "name": "Time Clock workforce attendance & payroll",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/ffffff/checked-user-male.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/ffffff/checked-user-male.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#080c17",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait"
+}

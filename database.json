@@ -1,0 +1,176 @@
+{
+  "attendance": [
+    {
+      "empId": "EMP001",
+      "date": "2026-06-05",
+      "checkIn": "09:02",
+      "checkOut": "18:05",
+      "status": "Present"
+    },
+    {
+      "empId": "EMP001",
+      "date": "2026-06-04",
+      "checkIn": "09:31",
+      "checkOut": "18:15",
+      "status": "Late"
+    },
+    {
+      "empId": "EMP002",
+      "date": "2026-06-06",
+      "checkIn": "12:28",
+      "checkOut": null,
+      "status": "Late"
+    },
+    {
+      "empId": "EMP001",
+      "date": "2026-06-10",
+      "checkIn": "11:46",
+      "checkOut": "11:47",
+      "status": "Late",
+      "netHours": 0,
+      "overtime": 0
+    }
+  ],
+  "booted": true,
+  "emails": [
+    {
+      "to": "biswaranjansahoo5054@gmail.com",
+      "subject": "Your Corporate Profile Access",
+      "body": "Welcome Biswaranjan Sahoo,\n\nYour portal access password is: Biswa@5054",
+      "ts": "2026-06-06T06:55:26.721Z"
+    },
+    {
+      "to": "biswaranjansahoo5054@gmail.com",
+      "subject": "Clock-In Notification",
+      "body": "Hi Biswaranjan Sahoo,\n\nYou clocked in successfully at 12:28.\nStatus: Late\n\n— Time Clock",
+      "ts": "2026-06-06T06:58:21.197Z"
+    },
+    {
+      "to": "employee@company.com",
+      "subject": "Clock-In Notification",
+      "body": "Hi Alex Johnson,\n\nYou clocked in successfully at 11:46.\nStatus: Late\n\n— Time Clock",
+      "ts": "2026-06-10T06:16:32.944Z"
+    },
+    {
+      "to": "employee@company.com",
+      "subject": "Clock-In Notification",
+      "body": "Hi Alex Johnson,\n\nYou clocked in successfully at 11:46.\nStatus: Late\n\n— Time Clock",
+      "ts": "2026-06-10T06:16:44.056Z"
+    }
+  ],
+  "employees": [
+    {
+      "id": "EMP000",
+      "name": "HR Administrator",
+      "email": "admin@company.com",
+      "password": "Admin@1234",
+      "role": "Admin",
+      "dept": "HR",
+      "designation": "HR Manager",
+      "salary": 9000,
+      "otRate": 45,
+      "leaveBalance": {
+        "Annual": 21,
+        "Sick": 10,
+        "Casual": 7,
+        "Holiday": 0
+      },
+      "timeCut": 0,
+      "timeDebt": 0,
+      "overtimeAccumulated": 0
+    },
+    {
+      "id": "EMP001",
+      "name": "Alex Johnson",
+      "email": "employee@company.com",
+      "password": "Emp@1234",
+      "role": "Employee",
+      "dept": "Engineering",
+      "designation": "Software Engineer",
+      "salary": 6000,
+      "otRate": 30,
+      "leaveBalance": {
+        "Annual": 21,
+        "Sick": 10,
+        "Casual": 7,
+        "Holiday": 0
+      },
+      "timeCut": 0,
+      "timeDebt": 0,
+      "overtimeAccumulated": 0
+    },
+    {
+      "id": "EMP002",
+      "name": "Biswaranjan Sahoo",
+      "email": "biswaranjansahoo5054@gmail.com",
+      "password": "Biswa@5054",
+      "role": "Employee",
+      "dept": "Engineering",
+      "designation": "HR Manager",
+      "salary": 0,
+      "otRate": 0,
+      "leaveBalance": {
+        "Annual": 21,
+        "Sick": 10,
+        "Casual": 7,
+        "Holiday": 0
+      },
+      "timeCut": 0,
+      "timeDebt": 0,
+      "overtimeAccumulated": 0
+    }
+  ],
+  "geofence": {
+    "lat": 20.305974,
+    "lng": 85.842293,
+    "radius": 200
+  },
+  "holidays": [
+    {
+      "date": "2026-01-01",
+      "name": "New Year"
+    },
+    {
+      "date": "2026-08-15",
+      "name": "Independence Day"
+    },
+    {
+      "date": "2026-10-02",
+      "name": "Gandhi Jayanti"
+    },
+    {
+      "date": "2026-12-25",
+      "name": "Christmas"
+    }
+  ],
+  "leaves": [],
+  "notifications": [
+    {
+      "msg": "New employee registered: Biswaranjan Sahoo",
+      "icon": "👤",
+      "ts": "2026-06-06T06:55:26.717Z"
+    },
+    {
+      "msg": "Biswaranjan Sahoo clocked in at 12:28 (Late)",
+      "icon": "⚠️",
+      "ts": "2026-06-06T06:58:21.194Z"
+    },
+    {
+      "msg": "Alex Johnson clocked in at 11:46 (Late)",
+      "icon": "⚠️",
+      "ts": "2026-06-10T06:16:32.942Z"
+    },
+    {
+      "msg": "Alex Johnson clocked in at 11:46 (Late)",
+      "icon": "⚠️",
+      "ts": "2026-06-10T06:16:44.055Z"
+    },
+    {
+      "msg": "Alex Johnson clocked out at 11:47",
+      "icon": "🏁",
+      "ts": "2026-06-10T06:17:04.627Z"
+    }
+  ],
+  "outside_work": [],
+  "payrolls": []
+}

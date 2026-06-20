@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Clock</title>
+  <meta name="description" content="Modern Employee Attendance and Payroll Management System with Face ID and GPS Geofencing.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('ServiceWorker registered:', reg.scope))
+          .catch(err => console.error('ServiceWorker registration failed:', err));
+      });
+    }
+  </script>
+</head>
+<body>
+
+<!-- ===================== LOGIN PAGE ===================== -->
+<div id="login-page" class="login-page">
+  <div class="login-card glass">
+    <div class="login-brand">
+      <div class="login-logo"><i data-lucide="shield-check" style="width:28px;height:28px;"></i></div>
+      <h1>Time Clock Portal</h1>
+      <p>Workforce Attendance &amp; Payroll Management</p>
+    </div>
+
+    <form id="login-form">
+      <div class="form-row">
+        <label for="l-email">Corporate Email</label>
+        <div class="input-icon">
+          <i data-lucide="mail" style="width:18px;height:18px;"></i>
+          <input type="email" id="l-email" placeholder="name@company.com" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="l-pass">Password</label>
+        <div class="input-icon">
+          <i data-lucide="lock" style="width:18px;height:18px;"></i>
+          <input type="password" id="l-pass" placeholder="••••••••" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:6px;">
+        <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+        Sign In Securely
+      </button>
+    </form>
+
+    <div class="demo-logins">
+      <p>Quick Demo Login — click to fill:</p>
+      <div class="demo-login-item" id="quick-admin">
+        <span><strong>HR Admin</strong> — admin@company.com</span>
+        <i data-lucide="user-cog" style="width:15px;height:15px;color:var(--accent);"></i>
+      </div>
+      <div class="demo-login-item" id="quick-emp">
+        <span><strong>Employee</strong> — employee@company.com</span>
+        <i data-lucide="user" style="width:15px;height:15px;color:var(--accent);"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== GEOFENCE BLOCK SCREEN ===================== -->
+<div id="geo-block" class="geo-block-screen">
+  <div class="geo-block-icon"><i data-lucide="map-pin-off" style="width:80px;height:80px;"></i></div>
+  <h2>Outside Office Zone</h2>
+  <p id="geo-block-msg">Your current location is outside the permitted office boundary. Please move within the designated office area to clock in.</p>
+  <div style="display:flex;gap:12px;">
+    <button class="btn btn-secondary btn-sm" id="geo-retry-btn">
+      <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> Retry Location
+    </button>
+    <button class="btn btn-danger btn-sm" id="geo-logout-btn">
+      <i data-lucide="log-out" style="width:15px;height:15px;"></i> Logout
+    </button>
+  </div>
+</div>
+
+<!-- ===================== APP WORKSPACE ===================== -->
+<div id="app" class="app-layout hidden">
+
+  <!-- Sidebar mobile backdrop overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><i data-lucide="activity" style="width:20px;height:20px;"></i></div>
+      <span class="sidebar-brand-name gradient-text">Time Clock</span>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="s-avatar">?</div>
+      <div class="user-info">
+        <div class="user-info-name" id="s-name">—</div>
+        <div class="user-info-role" id="s-role">—</div>
+      </div>
+    </div>
+
+    <!-- DB Connection Status -->
+    <div class="geo-indicator" id="db-status-bar" style="margin-bottom:8px;">
+      <div class="geo-dot" id="db-dot"></div>
+      <span id="db-status-text">Connecting database…</span>
+    </div>
+
+    <!-- Geofence Status (Employee only) -->
+    <div class="geo-indicator hidden" id="geo-status-bar">
+      <div class="geo-dot" id="geo-dot"></div>
+      <span id="geo-status-text">Checking location…</span>
+    </div>
+
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+
+    <div class="sidebar-footer">
+      <button id="theme-btn" class="btn btn-secondary btn-sm">
+        <i data-lucide="moon" id="theme-icon" style="width:15px;height:15px;"></i>
+        <span id="theme-label">Dark Mode</span>
+      </button>
+      <button id="logout-btn" class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,0.2);">
+        <i data-lucide="log-out" style="width:15px;height:15px;"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <header class="page-header">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="menu-btn" id="menu-btn"><i data-lucide="menu" style="width:22px;height:22px;"></i></button>
+        <button class="btn-icon hidden" id="hdr-back-btn" title="Back to Dashboard" style="border:none;background:var(--bg3);flex-shrink:0;"><i data-lucide="arrow-left" style="width:16px;height:16px;"></i></button>
+        <h2 class="page-title" id="page-title">Dashboard</h2>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" id="emails-btn" title="Email Logs">
+          <i data-lucide="mail" style="width:18px;height:18px;"></i>
+          <span class="dot hidden" id="email-dot"></span>
+        </button>
+        <button class="icon-btn" id="notif-btn" title="Notifications">
+          <i data-lucide="bell" style="width:18px;height:18px;"></i>
+          <span class="dot hidden" id="notif-dot"></span>
+        </button>
+        <span class="date-label" id="hdr-date">—</span>
+      </div>
+    </header>
+
+    <!-- ===== VIEWS ===== -->
+
+    <!-- EMPLOYEE DASHBOARD -->
+    <div id="v-emp-dash" class="view-panel">
+      <!-- Out of bounds break alert -->
+      <div id="out-of-bounds-alert" class="ai-box hidden" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-color: rgba(239, 68, 68, 0.25);">
+        <div class="ai-icon" style="background: linear-gradient(135deg, var(--danger), var(--warn)); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);"><i data-lucide="map-pin-off" style="width:20px;height:20px;"></i></div>
+        <div style="flex:1;">
+          <div class="ai-title" style="color:var(--danger); font-weight:800;">Outside Permitted Office Zone!</div>
+          <div class="ai-text" id="out-of-bounds-text">You have left the allowed geofence boundary. Your shift has been automatically switched to **Break Mode**. If you do not return or obtain approval, your timer will stop once your break time is exhausted.</div>
+          <div class="timer-details" style="margin-top:12px; background:rgba(0,0,0,0.03); max-width:300px;">
+            <div class="timer-row"><span>Remaining Break Time:</span><span id="break-timer-lbl" style="color:var(--warn); font-size:16px; font-weight:800;">60m 00s</span></div>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:10px;">
+            <button id="req-outside-work-btn" class="btn btn-secondary btn-sm" style="background:var(--bg2);">Request Outside Work Approval</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI box -->
+      <div class="ai-box">
+        <div class="ai-icon"><i data-lucide="sparkles" style="width:20px;height:20px;"></i></div>
+        <div>
+          <div class="ai-title">AI Workforce Insights</div>
+          <div class="ai-text" id="emp-ai-text">Analysing attendance patterns…</div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Shift Today</span>
+            <div class="kpi-icon" style="background:var(--accent-glow);"><i data-lucide="clock" style="width:20px;height:20px;color:var(--accent);"></i></div>
+          </div>
+          <div class="kpi-value" id="e-kpi-shift">0h 0m</div>
+          <div class="kpi-sub">8hrs work + 1hr break policy</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Present (Month)</span>
+            <div class="kpi-icon" style="background:var(--success-bg);"><i data-lucide="calendar-check" style="width:20px;height:20px;color:var(--success);"></i></div>
+          </div>
+          <div class="kpi-value" id="e-kpi-days">0 / 22</div>
+          <div class="kpi-sub" id="e-kpi-rate">0% attendance</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Leave Balance</span>
+            <div class="kpi-icon" style="background:var(--warn-bg);"><i data-lucide="file-text" style="width:20px;height:20px;color:var(--warn);"></i></div>
+          </div>
+          <div class="kpi-value" id="e-kpi-leave">0 Days</div>
+          <div class="kpi-sub">Paid leave available</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <span class="kpi-label">Carry-over Time</span>
+            <div class="kpi-icon" style="background:var(--purple-bg);"><i data-lucide="arrow-left-right" style="width:20px;height:20px;color:var(--purple);"></i></div>
+          </div>
+          <div class="kpi-value" id="e-kpi-carryover">0.00 hrs</div>
+          <div class="kpi-sub" id="e-kpi-carryover-sub">No cut/debt pending</div>
+        </div>
+      </div>
+
+      <!-- Face Scanner + Timer -->
+      <div class="two-col" style="align-items:stretch;">
+        <!-- FACE CAMERA PANEL -->
+        <div class="panel">
+          <div class="bio-panel" id="bio-panel">
+            <div class="bio-title">Biometric Attendance</div>
+            <div class="bio-sub">Face scan required to clock in/out</div>
+
+            <!-- Camera ring / fallback -->
+            <div class="scanner-ring" id="scanner-ring">
+              <video id="cam-feed" class="scanner-video hidden" autoplay playsinline muted></video>
+              <canvas id="cam-canvas" class="scanner-canvas hidden"></canvas>
+              <div class="scanner-dashed"></div>
+              <div class="scanner-laser hidden" id="scan-laser"></div>
+              <div class="scanner-pulse hidden" id="scan-pulse"></div>
+              <div class="scanner-fallback" id="cam-fallback">
+                <i data-lucide="scan-face" style="width:64px;height:64px;opacity:0.6;"></i>
+              </div>
+            </div>
+
+            <!-- Location verify strip -->
+            <div class="loc-verify-strip" id="loc-strip" style="display:none;">
+              <i data-lucide="map-pin" style="width:16px;height:16px;color:var(--accent);"></i>
+              <span id="loc-strip-text">Verifying location…</span>
+            </div>
+
+            <div class="scanner-status" id="scan-status">Ready to scan</div>
+
+            <div class="scanner-btn-container">
+              <div class="scanner-main-btns">
+                <button class="btn btn-primary btn-sm" id="btn-checkin">
+                  <i data-lucide="log-in" style="width:15px;height:15px;"></i> Clock In
+                </button>
+                <button class="btn btn-danger btn-sm" id="btn-checkout" disabled>
+                  <i data-lucide="log-out" style="width:15px;height:15px;"></i> Clock Out
+                </button>
+              </div>
+              <button class="btn btn-secondary btn-sm hidden" id="btn-break">
+                <i data-lucide="coffee" style="width:15px;height:15px;"></i> <span id="btn-break-text">Start Break</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVE TIMER PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Live Shift Timer</span>
+            <span class="badge" id="shift-status-badge" style="background:var(--bg3);color:var(--text2);">Offline</span>
+          </div>
+          <div class="timer-widget">
+            <div class="timer-display" id="timer-disp">00:00:00</div>
+            <div class="timer-status-row">
+              <div class="pulse-dot hidden" id="timer-dot"></div>
+              <span id="timer-label">Not clocked in</span>
+            </div>
+            <div class="timer-details">
+              <div class="timer-row"><span>Clock-In Time</span><span id="td-checkin">—</span></div>
+              <div class="timer-row"><span>Break (Auto)</span><span>1 Hour</span></div>
+              <div class="timer-row" id="row-carryover-cut" style="display:none; color:var(--success);"><span>Carry-over Time Cut</span><span id="td-carryover-cut">0.00 hrs</span></div>
+              <div class="timer-row" id="row-carryover-debt" style="display:none; color:var(--warn);"><span>Carry-over Time Debt</span><span id="td-carryover-debt">0.00 hrs</span></div>
+              <div class="timer-row"><span>Required Hours Today</span><span id="td-req-hours">8.00 hrs</span></div>
+              <div class="timer-row"><span>Expected Clock-Out</span><span id="td-checkout">—</span></div>
+              <div class="timer-row"><span>Net Work Hours</span><span id="td-net">0.00 hrs</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Recent Logs -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Recent Attendance Logs</span>
+          <button class="btn btn-secondary btn-sm" id="e-see-all-logs">See All</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Check In</th><th>Check Out</th>
+              <th>Work Hrs</th><th>Overtime</th><th>Status</th>
+            </tr></thead>
+            <tbody id="e-recent-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEE LOGS VIEW -->
+    <div id="v-emp-logs" class="view-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Attendance History</span>
+          <input type="month" id="emp-log-filter" class="geo-form-group input" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Check In</th><th>Check Out</th>
+              <th>Work Hrs</th><th>Overtime</th><th>Status</th>
+            </tr></thead>
+            <tbody id="emp-log-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEE LEAVES & PAYSLIPS -->
+    <div id="v-emp-leaves" class="view-panel">
+      <div class="four-col">
+        <div class="leave-card"><div class="leave-num" id="bal-annual">0</div><div class="leave-type">Annual Leave</div></div>
+        <div class="leave-card"><div class="leave-num" id="bal-sick">0</div><div class="leave-type">Sick Leave</div></div>
+        <div class="leave-card"><div class="leave-num" id="bal-casual">0</div><div class="leave-type">Casual Leave</div></div>
+        <div class="leave-card"><div class="leave-num" id="bal-holiday">0</div><div class="leave-type">Overtime Holiday</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Apply for Leave</span></div>
+          <form id="leave-form" class="modal-form" style="margin-top:0;">
+            <div class="form-field">
+              <label for="lv-type">Leave Type</label>
+              <select id="lv-type">
+                <option value="Annual">Annual</option>
+                <option value="Sick">Sick</option>
+                <option value="Casual">Casual</option>
+                <option value="Holiday">Overtime Holiday</option>
+                <option value="Half-Day Annual">Half-Day Annual</option>
+                <option value="Half-Day Sick">Half-Day Sick</option>
+                <option value="Half-Day Casual">Half-Day Casual</option>
+                <option value="Half-Day Holiday">Half-Day Overtime Holiday</option>
+              </select>
+            </div>
+            <div class="form-row-2">
+              <div class="form-field"><label for="lv-start">From</label><input type="date" id="lv-start" required></div>
+              <div class="form-field"><label for="lv-end">To</label><input type="date" id="lv-end" required></div>
+            </div>
+            <div class="form-checkbox-row">
+              <input type="checkbox" id="lv-halfday">
+              <label for="lv-halfday">Apply as Half-Day Leave</label>
+            </div>
+            <div class="form-field">
+              <label for="lv-reason">Reason</label>
+              <textarea id="lv-reason" rows="3" placeholder="Briefly describe reason…" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Leave Request</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Leave History</span></div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Period</th><th>Type</th><th>Status</th></tr></thead>
+            <tbody id="emp-leaves-tbody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Outside Work Section -->
+      <div class="two-col" style="margin-top:20px;">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Apply for Outside Work Approval</span></div>
+          <p style="font-size:12px; color:var(--text2); margin-top:-8px; margin-bottom:14px;">Bypasses office geofence checks for remote assignments, business trips, or approved WFH.</p>
+          <form id="outside-work-form" class="modal-form" style="margin-top:0;">
+            <div class="form-field">
+              <label for="ow-type">Activity Type</label>
+              <select id="ow-type">
+                <option value="Work From Home">Work From Home</option>
+                <option value="Client Visit">Client Visit</option>
+                <option value="Field Duty">Field Duty</option>
+                <option value="Business Trip">Business Trip</option>
+              </select>
+            </div>
+            <div class="form-field"><label for="ow-date">Requested Date</label><input type="date" id="ow-date" required></div>
+            <div class="form-field">
+              <label for="ow-reason">Justification / Destination</label>
+              <textarea id="ow-reason" rows="3" placeholder="Specify tasks to be performed / location details…" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Outside Work Request</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Outside Work Requests</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Type</th><th>Reason</th><th>Status</th></tr></thead>
+              <tbody id="emp-outside-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:20px;">
+        <div class="panel-header"><span class="panel-title">Payslip Registry</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Period</th><th>Base Pay</th><th>Overtime</th><th>Deductions</th><th>Net Pay</th><th>Paid On</th><th>Action</th></tr></thead>
+            <tbody id="emp-payslip-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="v-admin-dash" class="view-panel">
+      <!-- Geofence settings -->
+      <div class="geo-settings">
+        <h3><i data-lucide="map-pin" style="width:18px;height:18px;color:var(--accent);"></i> Office Geofence Configuration</h3>
+        <p>Set your corporate office coordinates and radius. Employees must be within this radius to clock in/out.</p>
+        <div class="geo-form">
+          <div class="geo-form-group">
+            <label>Latitude</label>
+            <input type="number" step="0.000001" id="geo-lat" placeholder="20.296100">
+          </div>
+          <div class="geo-form-group">
+            <label>Longitude</label>
+            <input type="number" step="0.000001" id="geo-lng" placeholder="85.824500">
+          </div>
+          <div class="geo-form-group">
+            <label>Radius (meters)</label>
+            <input type="number" id="geo-radius" placeholder="200" min="50">
+          </div>
+          <button class="btn btn-secondary btn-sm" id="geo-use-my-loc" style="align-self:flex-end;">
+            <i data-lucide="crosshair" style="width:15px;height:15px;"></i> My Location
+          </button>
+          <button class="btn btn-primary btn-sm" id="geo-save-btn" style="align-self:flex-end;">
+            <i data-lucide="save" style="width:15px;height:15px;"></i> Save
+          </button>
+        </div>
+        <div class="geo-status-row" id="geo-save-status" style="display:none;">
+          <i data-lucide="check-circle" style="width:16px;height:16px;color:var(--success);"></i>
+          <span id="geo-save-msg">Geofence settings saved.</span>
+        </div>
+      </div>
+      <!-- AI insights -->
+      <div class="ai-box">
+        <div class="ai-icon"><i data-lucide="sparkles" style="width:20px;height:20px;"></i></div>
+        <div>
+          <div class="ai-title">AI HR Analytics</div>
+          <div class="ai-text" id="admin-ai-text">Calculating workforce analytics…</div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-top"><span class="kpi-label">Total Employees</span>
+            <div class="kpi-icon" style="background:var(--accent-glow);"><i data-lucide="users" style="width:20px;height:20px;color:var(--accent);"></i></div></div>
+          <div class="kpi-value" id="a-kpi-emp">0</div>
+          <div class="kpi-sub">Active workforce</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><span class="kpi-label">Today's Attendance</span>
+            <div class="kpi-icon" style="background:var(--success-bg);"><i data-lucide="check-circle-2" style="width:20px;height:20px;color:var(--success);"></i></div></div>
+          <div class="kpi-value" id="a-kpi-att">0%</div>
+          <div class="kpi-sub" id="a-kpi-late">0% late today</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><span class="kpi-label">Pending Leaves</span>
+            <div class="kpi-icon" style="background:var(--warn-bg);"><i data-lucide="mail-open" style="width:20px;height:20px;color:var(--warn);"></i></div></div>
+          <div class="kpi-value" id="a-kpi-leaves">0</div>
+          <div class="kpi-sub">Awaiting approval</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><span class="kpi-label">Monthly Payroll</span>
+            <div class="kpi-icon" style="background:var(--purple-bg);"><i data-lucide="banknote" style="width:20px;height:20px;color:var(--purple);"></i></div></div>
+          <div class="kpi-value" id="a-kpi-payroll">$0</div>
+          <div class="kpi-sub" id="a-kpi-period">Current Period</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Attendance Trend (7 Days)</span></div>
+          <div class="chart-container"><canvas id="chart-trend"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Dept. Distribution</span></div>
+          <div class="chart-container"><canvas id="chart-dept"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Today's logs table -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Today's Attendance</span>
+          <button class="btn btn-secondary btn-sm" id="a-see-all-att">View All Logs</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Employee</th><th>Dept.</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>OT</th><th>Status</th></tr></thead>
+            <tbody id="a-today-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN EMPLOYEES -->
+    <div id="v-admin-emp" class="view-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Employee Directory</span>
+          <button class="btn btn-primary btn-sm" id="add-emp-btn">
+            <i data-lucide="user-plus" style="width:15px;height:15px;"></i> Add Employee
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Dept.</th><th>Role</th><th>Salary</th><th>Time Debt</th><th>Actions</th></tr></thead>
+            <tbody id="emp-dir-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN ATTENDANCE -->
+    <div id="v-admin-att" class="view-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Master Attendance Logs</span>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="date" id="att-date-filter" class="geo-form-group input" style="padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);">
+            <select id="att-dept-filter" style="padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);">
+              <option value="ALL">All Departments</option>
+              <option value="Engineering">Engineering</option>
+              <option value="HR">HR & Admin</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="Finance">Finance</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Emp ID</th><th>Name</th><th>Clock In</th><th>Clock Out</th><th>Work Hrs</th><th>OT</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="att-log-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN LEAVES -->
+    <div id="v-admin-leaves" class="view-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Leave Approvals Centre</span>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <select id="leave-status-filter" style="padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);">
+              <option value="ALL">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+            <select id="leave-type-filter" style="padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);">
+              <option value="ALL">All Leave Types</option>
+              <option value="Annual">Annual</option>
+              <option value="Sick">Sick</option>
+              <option value="Casual">Casual</option>
+              <option value="Holiday">Overtime Holiday</option>
+              <option value="Half-Day Annual">Half-Day Annual</option>
+              <option value="Half-Day Sick">Half-Day Sick</option>
+              <option value="Half-Day Casual">Half-Day Casual</option>
+              <option value="Half-Day Holiday">Half-Day Overtime Holiday</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Employee</th><th>Type</th><th>From → To</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="leave-approve-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN OUTSIDE WORK APPROVALS -->
+    <div id="v-admin-outside" class="view-panel">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Outside Work Approvals Centre</span></div>
+        <p style="font-size:13px; color:var(--text2); margin-top:-8px; margin-bottom:14px;">Approve or reject WFH / Field duty requests to bypass geofencing checking.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Employee</th><th>Type</th><th>Requested Date</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="outside-approve-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN HOLIDAYS -->
+    <div id="v-admin-holidays" class="view-panel">
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Holiday Calendar</span>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-icon" id="cal-prev"><i data-lucide="chevron-left" style="width:16px;height:16px;"></i></button>
+              <button class="btn-icon" id="cal-next"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></button>
+            </div>
+          </div>
+          <div class="cal-nav">
+            <span id="cal-month-label">—</span>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Holidays List</span>
+            <button class="btn btn-primary btn-sm" id="add-holiday-btn">
+              <i data-lucide="plus" style="width:15px;height:15px;"></i> Add
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Date</th><th>Name</th><th></th></tr></thead>
+            <tbody id="holiday-tbody"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN PAYROLL -->
+    <div id="v-admin-payroll" class="view-panel">
+      <div class="panel" style="margin-bottom:20px;">
+        <div class="panel-header">
+          <span class="panel-title">Process Payroll</span>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <select id="payroll-period" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);">
+              <option value="05-2026">May 2026</option>
+              <option value="06-2026" selected>June 2026</option>
+              <option value="07-2026">July 2026</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="run-payroll-btn">
+              <i data-lucide="zap" style="width:15px;height:15px;"></i> Run & Disburse
+            </button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-top:-8px;">Calculates base pay + overtime − absences/late penalties for all employees.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Payroll Register</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Emp ID</th><th>Employee</th><th>Base</th><th>Overtime</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="payroll-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Sticky Bottom Navigation Bar (Mobile only) -->
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+</div>
+
+<!-- ===================================================
+     MODALS
+=================================================== -->
+
+<!-- Outside Work Request Modal (For quick trigger when out-of-bounds) -->
+<div class="modal-overlay" id="modal-outside-req">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <h3>Request Outside Work</h3>
+      <button class="modal-close" id="outside-req-close">×</button>
+    </div>
+    <form id="modal-outside-form" class="modal-form">
+      <div class="form-field">
+        <label for="m-ow-type">Activity Type</label>
+        <select id="m-ow-type">
+          <option value="Work From Home">Work From Home</option>
+          <option value="Client Visit">Client Visit</option>
+          <option value="Field Duty">Field Duty</option>
+          <option value="Business Trip">Business Trip</option>
+        </select>
+      </div>
+      <div class="form-field"><label for="m-ow-date">Requested Date</label><input type="date" id="m-ow-date" required readonly></div>
+      <div class="form-field">
+        <label for="m-ow-reason">Reason / Destination</label>
+        <textarea id="m-ow-reason" rows="3" placeholder="Describe the reason for working outside the office zone…" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit Request</button>
+    </form>
+  </div>
+</div>
+
+<!-- Face ID Scan Modal (for manual clock in/out trigger) -->
+<div class="modal-overlay" id="modal-faceid">
+  <div class="modal-box" style="max-width:420px;text-align:center;">
+    <div class="modal-header" style="justify-content:center;position:relative;">
+      <h3>Face Verification</h3>
+      <button class="modal-close" id="faceid-close" style="position:absolute;right:0;">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="scanner-ring" style="margin-bottom:16px;">
+        <video id="modal-cam" class="scanner-video hidden" autoplay playsinline muted></video>
+        <canvas id="modal-canvas" class="scanner-canvas hidden"></canvas>
+        <div class="scanner-dashed"></div>
+        <div class="scanner-laser hidden" id="modal-laser"></div>
+        <div class="scanner-pulse hidden" id="modal-pulse"></div>
+        <div class="scanner-fallback" id="modal-fallback">
+          <i data-lucide="scan-face" style="width:64px;height:64px;opacity:0.6;"></i>
+        </div>
+      </div>
+      <div class="loc-verify-strip" id="modal-loc-strip" style="display:none;">
+        <i data-lucide="map-pin" style="width:16px;height:16px;color:var(--accent);"></i>
+        <span id="modal-loc-text">Verifying location…</span>
+      </div>
+      <div class="scanner-status" id="modal-scan-status">Align your face in the frame</div>
+      <button class="btn btn-primary btn-sm" id="modal-scan-btn" style="width:220px;">
+        <i data-lucide="scan" style="width:15px;height:15px;"></i> Verify & Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Employee Modal -->
+<div class="modal-overlay" id="modal-emp">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="emp-modal-title">Add Employee</h3>
+      <button class="modal-close" id="emp-modal-close">×</button>
+    </div>
+    <form id="emp-form" class="modal-form">
+      <input type="hidden" id="emp-edit-id">
+      <div class="form-row-2">
+        <div class="form-field"><label for="ef-name">Full Name</label><input type="text" id="ef-name" required></div>
+        <div class="form-field"><label for="ef-email">Corporate Email</label><input type="email" id="ef-email" required></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field">
+          <label for="ef-pwd">Set Password</label>
+          <input type="text" id="ef-pwd" placeholder="Admin-assigned password" required>
+        </div>
+        <div class="form-field">
+          <label for="ef-role">System Role</label>
+          <select id="ef-role">
+            <option value="Employee">Employee</option>
+            <option value="Admin">HR Admin</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field">
+          <label for="ef-dept">Department</label>
+          <select id="ef-dept">
+            <option>Engineering</option><option>HR</option><option>Marketing</option><option>Sales</option><option>Finance</option>
+          </select>
+        </div>
+        <div class="form-field"><label for="ef-desg">Designation</label><input type="text" id="ef-desg" placeholder="e.g. Engineer" required></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label for="ef-salary">Monthly Base Salary ($)</label><input type="number" id="ef-salary" min="0" placeholder="5000" required></div>
+        <div class="form-field"><label for="ef-ot">Overtime Rate ($/hr)</label><input type="number" id="ef-ot" min="0" placeholder="25" required></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label for="ef-timedebt">Carry-over Time Debt (Hrs)</label><input type="number" step="0.01" id="ef-timedebt" min="0" placeholder="0.00"></div>
+        <div class="form-field"><label for="ef-timecut">Carry-over Time Cut (Hrs)</label><input type="number" step="0.01" id="ef-timecut" min="0" placeholder="0.00"></div>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Employee Profile</button>
+    </form>
+  </div>
+</div>
+
+<!-- Add Holiday Modal -->
+<div class="modal-overlay" id="modal-holiday">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>Add Holiday</h3>
+      <button class="modal-close" id="holiday-modal-close">×</button>
+    </div>
+    <form id="holiday-form" class="modal-form">
+      <div class="form-field"><label for="hf-date">Date</label><input type="date" id="hf-date" required></div>
+      <div class="form-field"><label for="hf-name">Holiday Name</label><input type="text" id="hf-name" placeholder="e.g. Independence Day" required></div>
+      <button type="submit" class="btn btn-primary">Add to Calendar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Attendance Modal (Admin Only) -->
+<div class="modal-overlay" id="modal-edit-attendance">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <h3>Edit Attendance Log</h3>
+      <button class="modal-close" id="edit-att-close">×</button>
+    </div>
+    <form id="edit-att-form" class="modal-form">
+      <input type="hidden" id="ea-idx">
+      <div class="form-row-2">
+        <div class="form-field"><label>Employee</label><input type="text" id="ea-name" readonly style="background:var(--bg3);"></div>
+        <div class="form-field"><label>Date</label><input type="text" id="ea-date" readonly style="background:var(--bg3);"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label for="ea-checkin">Clock In Time</label><input type="time" id="ea-checkin" required></div>
+        <div class="form-field"><label for="ea-checkout">Clock Out Time</label><input type="time" id="ea-checkout"></div>
+      </div>
+      <div class="form-field">
+        <label for="ea-status">Status</label>
+        <select id="ea-status">
+          <option value="Present">Present</option>
+          <option value="Late">Late</option>
+          <option value="Absent">Absent</option>
+          <option value="Exceeded Break">Exceeded Break</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Attendance Changes</button>
+    </form>
+  </div>
+</div>
+
+<!-- Payslip Preview Modal -->
+<div class="modal-overlay" id="modal-payslip">
+  <div class="modal-box" style="max-width:680px;">
+    <div class="modal-header">
+      <h3>Payslip Preview</h3>
+      <button class="modal-close" id="payslip-close">×</button>
+    </div>
+    <div id="payslip-body" class="payslip-box"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+      <button class="btn btn-secondary btn-sm" id="print-slip-btn">
+        <i data-lucide="printer" style="width:15px;height:15px;"></i> Print
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Emails Drawer -->
+<div class="drawer-overlay" id="email-drawer">
+  <div class="drawer-box">
+    <div class="drawer-header">
+      <h3>Email Simulator</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary btn-sm" id="email-clear-btn" style="padding:4px 8px;font-size:12px;min-height:30px;">Clear All</button>
+        <button class="modal-close" id="email-drawer-close">×</button>
+      </div>
+    </div>
+    <p class="drawer-desc">Simulated outbound email notifications triggered by attendance events, payroll runs, and leave updates.</p>
+    <div class="drawer-list" id="email-list"></div>
+  </div>
+</div>
+
+<!-- Notifications Drawer -->
+<div class="drawer-overlay" id="notif-drawer">
+  <div class="drawer-box">
+    <div class="drawer-header">
+      <h3>Notifications</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary btn-sm" id="notif-clear-btn" style="padding:4px 8px;font-size:12px;min-height:30px;">Clear All</button>
+        <button class="modal-close" id="notif-drawer-close">×</button>
+      </div>
+    </div>
+    <p class="drawer-desc">In-app alerts from attendance, leave approvals, and payroll events.</p>
+    <div class="drawer-list" id="notif-list"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
